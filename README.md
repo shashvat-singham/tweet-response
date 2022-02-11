@@ -64,7 +64,6 @@ The dataset consists of 20,000 tweets with their corresponding emotion. The data
 
 The training set consists of 16,000 tweets, the test set consists of 2,000 tweets and the validation set also consists of 2,000 tweets. The dataset is stored in a pickle file which takes 47.6 MB of space on disk.
 
-This Emotion Dataset was prepared by Elvis Saravia and published on GitHub.
 
 ---
 

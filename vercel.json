@@ -5,7 +5,6 @@
   "trailingSlash": false,
   "headers": [
     {
-      "//": "script-src stays 'self' — there is no inline script anywhere. style-src needs 'unsafe-inline' because the report colours bars, cells and meters from metrics.json at render time via style attributes.",
       "source": "/(.*)",
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },

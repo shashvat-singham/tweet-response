@@ -1,0 +1,101 @@
+[
+  {
+    "text": "i cant helped but to feel burdened and anxious about this",
+    "probs": [
+      0.99220123,
+      0.00062407,
+      1.066e-05,
+      0.00202677,
+      0.00509574,
+      4.152e-05
+    ]
+  },
+  {
+    "text": "i feel confident around him and i am always there if he needs help",
+    "probs": [
+      0.00025207,
+      0.99455968,
+      0.00465017,
+      0.00021393,
+      8.699e-05,
+      0.00023716
+    ]
+  },
+  {
+    "text": "i feel tender when i have not done anything",
+    "probs": [
+      4.291e-05,
+      0.0043177,
+      0.99411773,
+      0.00023023,
+      0.00033555,
+      0.00095589
+    ]
+  },
+  {
+    "text": "i feel really selfish and feel guilty when i think about hurting myself",
+    "probs": [
+      0.05890588,
+      0.00383397,
+      0.000144,
+      0.9363419,
+      0.00076016,
+      1.408e-05
+    ]
+  },
+  {
+    "text": "i feel intimidated nervous and overwhelmed and i shake like a leaf",
+    "probs": [
+      0.00029287,
+      0.00039879,
+      5.469e-05,
+      0.00093315,
+      0.99170845,
+      0.00661205
+    ]
+  },
+  {
+    "text": "i always feel very shocked by that me threatening",
+    "probs": [
+      3.32e-05,
+      0.00140804,
+      0.00148818,
+      3.392e-05,
+      0.0029075,
+      0.99412916
+    ]
+  },
+  {
+    "text": "im feeling rather rotten so im not very ambitious right now",
+    "probs": [
+      0.99843745,
+      0.00061674,
+      2.89e-06,
+      0.00054978,
+      0.00036922,
+      2.393e-05
+    ]
+  },
+  {
+    "text": "im updating my blog because i feel shitty",
+    "probs": [
+      0.99911105,
+      0.00053066,
+      1.74e-06,
+      0.00022204,
+      0.00011256,
+      2.196e-05
+    ]
+  },
+  {
+    "text": "i never make her separate from me because i don t ever want her to feel like i m ashamed with her",
+    "probs": [
+      0.99872127,
+      0.00091482,
+      2.58e-06,
+      0.00019138,
+      0.00011864,
+      5.131e-05
+    ]
+  }
+]

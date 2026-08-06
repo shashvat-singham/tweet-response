@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tweet Emotion Recognition — a BiLSTM that runs in your browser</title>
+<meta name="description" content="A 176k-parameter bidirectional LSTM that classifies tweets into six emotions, quantised to int8 and executed entirely client-side. Full evaluation: confusion, calibration, risk–coverage, error analysis and the learned embedding space.">
+<meta name="author" content="Shashvat Singham">
+<meta name="color-scheme" content="dark light">
+<link rel="canonical" href="https://shashvat-singham.github.io/tweet-response/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Tweet Emotion Recognition — a BiLSTM that runs in your browser">
+<meta property="og:description" content="176k parameters, int8, zero dependencies. Live inference, leave-one-out attribution and a full evaluation report.">
+<meta property="og:url" content="https://shashvat-singham.github.io/tweet-response/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0e14'/%3E%3Cpath d='M6 21c3.6 0 3.6-10 7.2-10s3.6 10 7.2 10 3.6-6 5.6-6' fill='none' stroke='%2317c4a5' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./assets/style.css">
+</head>
+<body>
+<a class="skip" href="#demo">Skip to the live model</a>
+
+<div class="grain" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="#top">
+      <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><path d="M4 22c3.8 0 3.8-12 7.6-12S19.2 22 23 22s3.8-7 5.6-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <span>tweet-response</span>
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#demo">Model</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#data">Data</a>
+      <a href="#training">Training</a>
+      <a href="#evaluation">Evaluation</a>
+      <a href="#errors">Errors</a>
+      <a href="#embeddings">Embeddings</a>
+      <a href="#shipping">Shipping</a>
+    </nav>
+    <div class="topbar-actions">
+      <button id="theme" class="icon-btn" type="button" aria-label="Toggle colour theme">
+        <svg class="sun" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2.6v2.6M12 18.8v2.6M2.6 12h2.6M18.8 12h2.6M5.4 5.4l1.9 1.9M16.7 16.7l1.9 1.9M18.6 5.4l-1.9 1.9M7.3 16.7l-1.9 1.9"/></g></svg>
+        <svg class="moon" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M20 14.4A8.4 8.4 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4z" fill="currentColor"/></svg>
+      </button>
+      <a class="ghost-btn" href="https://github.com/shashvat-singham/tweet-response" rel="noopener">
+        <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        Source
+      </a>
+    </div>
+  </div>
+  <div class="scroll-rail"><i id="scrollbar"></i></div>
+</header>
+
+<main id="top">
+
+<!-- ─────────────────────────────  HERO  ───────────────────────────── -->
+<section class="hero">
+  <div class="hero-glow" aria-hidden="true"></div>
+  <div class="wrap hero-in">
+    <p class="eyelash">Sequence modelling · NLP · on-device inference</p>
+    <h1>Six emotions,<br><span class="grad">176,000 parameters</span>,<br>zero servers.</h1>
+    <p class="lede">
+      A bidirectional LSTM trained on <b data-fill="trainRows">—</b> tweets from the
+      <a href="https://huggingface.co/datasets/dair-ai/emotion" rel="noopener">dair-ai/emotion</a>
+      corpus, quantised to int8 and shipped as a
+      <b data-fill="weightsKb">—</b>&nbsp;KB binary. Everything below — the prediction,
+      the token attributions, the nearest-neighbour search — is computed on
+      <em>your</em> machine, in plain JavaScript, with no framework and no API call.
+    </p>
+
+    <div class="chips" id="heroStats">
+      <div class="chip"><b data-fill="testAcc">—</b><span>test accuracy</span></div>
+      <div class="chip"><b data-fill="macroF1">—</b><span>macro F1</span></div>
+      <div class="chip"><b data-fill="params">—</b><span>parameters</span></div>
+      <div class="chip"><b data-fill="latency">—</b><span>median inference</span></div>
+    </div>
+
+    <div class="hero-cta">
+      <a class="btn primary" href="#demo">Try the model</a>
+      <a class="btn" href="#evaluation">Read the evaluation</a>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────  DEMO  ───────────────────────────── -->
+<section id="demo" class="band">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-idx">01</span>
+      <div>
+        <h2>The model, live</h2>
+        <p>Type anything. The network re-runs on every keystroke — a forward pass, one
+           leave-one-out pass per token, and one pass per prefix — inside a web worker.</p>
+      </div>
+    </div>
+
+    <div class="demo-grid">
+      <div class="panel demo-input">
+        <div class="panel-head">
+          <span class="dot" data-state="idle" id="modelState"></span>
+          <span class="label" id="modelStateText">loading weights…</span>
+          <span class="spacer"></span>
+          <span class="mono tiny" id="passCount"></span>
+        </div>
+        <label class="sr" for="tweet">Text to classify</label>
+        <textarea id="tweet" rows="3" spellcheck="false"
+          placeholder="i feel like everything is finally falling into place"></textarea>
+        <div class="examples" id="examples"></div>
+        <p class="hint" id="encHint"></p>
+      </div>
+
+      <div class="panel demo-out">
+        <div class="panel-head"><span class="label">Posterior</span><span class="spacer"></span>
+          <span class="mono tiny" id="latency"></span></div>
+        <div id="bars" class="bars"></div>
+      </div>
+
+      <div class="panel span2">
+        <div class="panel-head"><span class="label">Token attribution</span>
+          <span class="spacer"></span>
+          <span class="mono tiny">Δ log-odds(<span id="attrClass">—</span>) when the token is removed</span>
+        </div>
+        <div id="tokens" class="tokens"></div>
+        <p class="foot">Warm tokens push the winning class up; cool tokens hold it down.
+          Exact leave-one-out ablation — one full forward pass per token, no gradient
+          approximation. Reported in log-odds because a saturated softmax flattens every
+          raw Δp to zero; hover a token for both numbers.</p>
+      </div>
+
+      <div class="panel span2">
+        <div class="panel-head"><span class="label">Belief trajectory</span>
+          <span class="spacer"></span>
+          <span class="mono tiny">posterior after reading the first <i>k</i> tokens</span>
+        </div>
+        <div id="trajectory" class="chart"></div>
+        <p class="foot">Each step re-encodes the truncated prefix from scratch, so the curve
+          shows what the model would have answered had the sentence stopped there.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────  ARCHITECTURE  ─────────────────────────── -->
+<section id="architecture" class="band alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-idx">02</span>
+      <div>
+        <h2>Architecture</h2>
+        <p>Four layers, faithful to the original Keras notebook — re-implemented in PyTorch
+           so the initialisers, gate order and unmasked padding all match.</p>
+      </div>
+    </div>
+    <div class="arch-grid">
+      <div class="panel arch-diagram" id="archDiagram"></div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">Parameter budget</span></div>
+        <div id="paramBudget" class="budget"></div>
+        <div class="note">
+          <h4>Why the second BiLSTM sees 40 channels</h4>
+          <p>The first bidirectional layer returns sequences, concatenating a 20-unit forward
+             pass with a 20-unit backward pass at every timestep. The second consumes that
+             40-channel sequence and emits only its endpoints: forward state at
+             <span class="mono">t=49</span>, backward state at <span class="mono">t=0</span>.</p>
+          <h4>Padding is not masked</h4>
+          <p>The original model had no <span class="mono">mask_zero</span>, so all 50 timesteps
+             — including padding — flow through the recurrence. The port keeps that behaviour
+             rather than quietly "fixing" it, because fixing it would no longer be the same model.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────  DATA  ───────────────────────────── -->
+<section id="data" class="band">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-idx">03</span>
+      <div>
+        <h2>The data, honestly</h2>
+        <p>20,000 self-reported emotion tweets, heavily imbalanced. Everything the model
+           can and cannot learn starts here.</p>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="panel">
+        <div class="panel-head"><span class="label">Split composition</span></div>
+        <div id="splitChart" class="chart"></div>
+        <p class="foot" id="splitFoot"></p>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">Tweet length</span><span class="spacer"></span>
+          <span class="mono tiny">words per tweet, train</span></div>
+        <div id="lenChart" class="chart"></div>
+        <p class="foot" id="lenFoot"></p>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">Vocabulary</span></div>
+        <div id="vocabStats" class="kv"></div>
+        <p class="foot">Rank-frequency truncation at 10,000 types is the single largest
+          information bottleneck in the pipeline — everything rarer collapses to one
+          <span class="mono">&lt;UNK&gt;</span> vector.</p>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><span class="label">Most discriminative tokens per class</span>
+        <span class="spacer"></span>
+        <span class="mono tiny">weighted log-odds, informative Dirichlet prior (Monroe et al. 2008)</span>
+      </div>
+      <div id="logOdds" class="logodds"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────  TRAINING  ─────────────────────────── -->
+<section id="training" class="band alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-idx">04</span>
+      <div>
+        <h2>Training run</h2>
+        <p>Adam, batch 32, early stopping on validation accuracy with patience 2.
+           One run, no cherry-picking — the curve below is the run that produced the
+           weights you just used.</p>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><span class="label">Accuracy</span><span class="spacer"></span>
+          <span class="legend"><i class="sw-train"></i>train <i class="sw-val"></i>validation</span></div>
+        <div id="accChart" class="chart tall"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">Cross-entropy loss</span><span class="spacer"></span>
+          <span class="legend"><i class="sw-train"></i>train <i class="sw-val"></i>validation</span></div>
+        <div id="lossChart" class="chart tall"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><span class="label">Reproduction ledger</span></div>
+      <div id="repro" class="ledger"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────────  EVALUATION  ────────────────────────── -->
+<section id="evaluation" class="band">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-idx">05</span>
+      <div>
+        <h2>Evaluation</h2>
+        <p>2,000 held-out tweets the model never saw. Accuracy alone would hide the
+           interesting parts, so: per-class scores, a confusion matrix you can click,
+           a reliability diagram and a risk–coverage curve.</p>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><span class="label">Confusion matrix</span><span class="spacer"></span>
+          <span class="mono tiny">row-normalised · click a cell</span></div>
+        <div id="confusion" class="confusion"></div>
+        <div id="cmDetail" class="cm-detail"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">Per-class performance</span></div>
+        <div id="perClass" class="perclass"></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><span class="label">Calibration</span><span class="spacer"></span>
+          <span class="mono tiny">ECE <b data-fill="ece">—</b></span></div>
+        <div id="calChart" class="chart tall"></div>
+        <p class="foot" id="calFoot"></p>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">Risk–coverage</span><span class="spacer"></span>
+          <span class="mono tiny">abstain below a confidence threshold</span></div>
+        <div id="covChart" class="chart tall"></div>
+        <div class="slider-row">
+          <input id="covSlider" type="range" min="1" max="40" value="40" aria-label="Coverage">
+          <span class="mono tiny" id="covReadout"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ────────────────────────  ERROR ANALYSIS  ──────────────────────── -->
+<section id="errors" class="band alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-idx">06</span>
+      <div>
+        <h2>Where it breaks</h2>
+        <p>The failures are not random. Two structural confusions account for most of the
+           lost accuracy, and both are visible in the label distribution.</p>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><span class="label">Dominant confusion pairs</span></div>
+        <div id="pairs" class="pairs"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">Confidently wrong</span><span class="spacer"></span>
+          <span class="mono tiny">highest-confidence mistakes on the test set</span></div>
+        <div id="worst" class="cases"></div>
+        <p class="foot">Click any example to load it into the live model above.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────  EMBEDDINGS  ─────────────────────────── -->
+<section id="embeddings" class="band">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-idx">07</span>
+      <div>
+        <h2>What the embedding layer learned</h2>
+        <p>16 dimensions, trained from scratch on 16k tweets — no GloVe, no pretraining.
+           Projected to two principal components and coloured by the emotion the model
+           predicts when the token is shown alone.</p>
+      </div>
+    </div>
+    <div class="grid-emb">
+      <div class="panel">
+        <div class="panel-head"><span class="label">Embedding space · PC1 × PC2</span>
+          <span class="spacer"></span><span class="mono tiny" id="pcaVar"></span></div>
+        <div id="pca" class="pca"></div>
+        <div id="pcaLegend" class="pca-legend"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">Nearest neighbours</span></div>
+        <label class="sr" for="nnInput">Word</label>
+        <input id="nnInput" class="text-input" type="text" placeholder="furious" spellcheck="false">
+        <div id="nnOut" class="nn"></div>
+        <p class="foot">Cosine similarity over the raw 16-d embedding matrix, computed in the
+          browser across all 10,000 rows.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────────  SHIPPING  ──────────────────────────── -->
+<section id="shipping" class="band alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-idx">08</span>
+      <div>
+        <h2>Getting it into a browser</h2>
+        <p>Training a model is half the job. The other half is making it small enough,
+           fast enough and verifiable enough to hand to a stranger on a phone.</p>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="panel">
+        <div class="panel-head"><span class="label">Quantisation</span></div>
+        <div id="quantStats" class="kv"></div>
+        <p class="foot">Symmetric per-tensor int8 for weight matrices, float32 for biases.
+          The fidelity numbers are measured against the float32 checkpoint on all 2,000
+          test tweets — not estimated.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">Payload</span></div>
+        <div id="payload" class="budget"></div>
+        <p class="foot">No TensorFlow.js (≈900 KB), no ONNX runtime, no WASM blob. The
+          forward pass is 90 lines of typed-array arithmetic.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">Measured on this device</span>
+          <span class="spacer"></span><button id="benchBtn" class="mini-btn" type="button">re-run</button></div>
+        <div id="bench" class="kv"></div>
+        <p class="foot" id="benchFoot">Wall time of a batch of single forward passes at sequence
+          length 50, divided by the batch size and timed right now in your browser.</p>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><span class="label">Numerical parity</span></div>
+        <div id="parity" class="parity"></div>
+        <p class="foot">The Python reference implementation in <span class="mono">ml/export.py</span>
+          emits golden probability vectors; the JavaScript engine reproduces them to the
+          shown tolerance. Parity is asserted in CI, not assumed.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">Reproduce it</span></div>
+<pre class="code"><code><span class="c"># 1 · fetch the official 16k/2k/2k split</span>
+python ml/fetch_data.py
+
+<span class="c"># 2 · train (CPU, ~6 min) — writes ml/artifacts/</span>
+python ml/train.py --config baseline
+
+<span class="c"># 3 · evaluate + quantise + emit docs/model/</span>
+python ml/export.py --config baseline
+
+<span class="c"># 4 · assert the JS engine matches the Python reference</span>
+node ml/parity.mjs</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────  MODEL CARD  ─────────────────────────── -->
+<section id="card" class="band">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-idx">09</span>
+      <div><h2>Model card</h2><p>What it is for, and what it is not for.</p></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><span class="label">Intended use</span></div>
+        <ul class="list">
+          <li>Demonstrating end-to-end sequence classification: data → training →
+            evaluation → quantised deployment.</li>
+          <li>Coarse emotional tone on short, first-person English text.</li>
+        </ul>
+        <div class="panel-head mt"><span class="label">Out of scope</span></div>
+        <ul class="list warn">
+          <li>Clinical, safety, hiring or moderation decisions about real people.</li>
+          <li>Sarcasm, negation-heavy text, code-switching, or any language but English.</li>
+          <li>Text unlike the training distribution — the corpus is self-reported
+            "i feel …" statements, and the model leans hard on that framing.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">Known limitations</span></div>
+        <ul class="list" id="limitations"></ul>
+        <div class="panel-head mt"><span class="label">Provenance</span></div>
+        <div id="provenance" class="kv"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-in">
+    <div>
+      <p class="mono tiny">tweet-response</p>
+      <p>BiLSTM emotion classifier · trained in PyTorch · served as int8 · no dependencies.</p>
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/shashvat-singham/tweet-response" rel="noopener">Repository</a>
+      <a href="https://github.com/shashvat-singham/tweet-response/blob/main/Twitter%20Emotion%20Recognition%20using%20RNN.ipynb" rel="noopener">Original notebook</a>
+      <a href="https://huggingface.co/datasets/dair-ai/emotion" rel="noopener">Dataset</a>
+      <a href="https://aclanthology.org/D18-1404/" rel="noopener">Saravia et al. 2018</a>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="./assets/app.js"></script>
+</body>
+</html>

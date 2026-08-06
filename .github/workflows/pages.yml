@@ -1,0 +1,54 @@
+name: verify & deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: engine parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # Replays the numpy reference vectors emitted by ml/export.py through the
+      # JavaScript engine that actually ships. Fails the deploy on any drift.
+      - name: JS engine vs Python reference
+        run: node ml/parity.mjs
+      - name: artefacts present and sane
+        run: |
+          test -s docs/model/weights.bin
+          test -s docs/model/vocab.json
+          test -s docs/model/metrics.json
+          node -e "const m=require('./docs/model/metrics.json');
+            if(!(m.headline.test_accuracy>0.8)) throw new Error('accuracy regressed');
+            if(m.classes.length!==6) throw new Error('class count changed');
+            console.log('metrics ok — test accuracy', m.headline.test_accuracy)"
+
+  deploy:
+    name: github pages
+    needs: verify
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - id: deployment
+        uses: actions/deploy-pages@v4

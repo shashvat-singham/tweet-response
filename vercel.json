@@ -5,6 +5,7 @@
   "trailingSlash": false,
   "headers": [
     {
+      "//": "script-src stays 'self' — there is no inline script anywhere. style-src needs 'unsafe-inline' because the report colours bars, cells and meters from metrics.json at render time via style attributes.",
       "source": "/(.*)",
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
@@ -12,7 +13,7 @@
         { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; worker-src 'self' blob:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'"
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; worker-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'"
         }
       ]
     },

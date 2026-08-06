@@ -17,8 +17,10 @@ const escapeHtml = (s) => s.replace(/[&<>"]/g, (c) =>
 
 /* ── theme ─────────────────────────────────────────────────────────────── */
 const root = document.documentElement;
+const forced = new URLSearchParams(location.search).get('theme');   // ?theme=light
 const stored = localStorage.getItem('tr-theme');
-if (stored) root.dataset.theme = stored;
+if (forced === 'light' || forced === 'dark') root.dataset.theme = forced;
+else if (stored) root.dataset.theme = stored;
 else if (window.matchMedia('(prefers-color-scheme: light)').matches) root.dataset.theme = 'light';
 
 const themeListeners = [];
@@ -772,7 +774,8 @@ function paintResult(res) {
     row.querySelector('.val').textContent = fmtPct(res.probs[i], 1);
     row.classList.toggle('top', i === top);
   });
-  $('#latency').textContent = `${res.ms.toFixed(1)} ms · ${res.passes} passes`;
+  requestAnimationFrame(() => $('#bars').classList.add('animate'));
+  $('#latency').textContent = `${res.ms > 0 ? res.ms.toFixed(1) + ' ms · ' : ''}${res.passes} passes`;
   $('#passCount').textContent = `${res.words.length} tokens`;
   $('#attrClass').textContent = M.classes[top];
   $('#attrClass').style.color = colorOf(M.classes[top]);

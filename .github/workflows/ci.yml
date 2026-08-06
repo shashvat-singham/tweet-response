@@ -1,32 +1,30 @@
-name: verify & deploy
+name: ci
 
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
 
 jobs:
-  verify:
-    name: engine parity
+  parity:
+    name: JS engine matches the Python reference
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      # Replays the numpy reference vectors emitted by ml/export.py through the
-      # JavaScript engine that actually ships. Fails the deploy on any drift.
-      - name: JS engine vs Python reference
+
+      # ml/export.py writes docs/model/golden.json from the numpy reference
+      # implementation. This replays those inputs through the JavaScript engine
+      # that actually ships and fails on any drift past 1e-4.
+      - name: engine parity
         run: node ml/parity.mjs
+
       - name: artefacts present and sane
         run: |
           test -s docs/model/weights.bin
@@ -35,20 +33,11 @@ jobs:
           node -e "const m=require('./docs/model/metrics.json');
             if(!(m.headline.test_accuracy>0.8)) throw new Error('accuracy regressed');
             if(m.classes.length!==6) throw new Error('class count changed');
+            if(m.headline.int8_argmax_agreement<0.99) throw new Error('quantisation drifted');
             console.log('metrics ok — test accuracy', m.headline.test_accuracy)"
 
-  deploy:
-    name: github pages
-    needs: verify
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      # Vercel deploys docs/ on every push to main via the Git integration;
+      # this job is the gate that tells you when that deploy is wrong.
+      - name: no stray references to a build step
+        run: |
+          ! grep -rn "node_modules" docs/index.html docs/assets || exit 1

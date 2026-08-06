@@ -5,9 +5,9 @@
 **A 176k-parameter bidirectional LSTM that classifies tweets into six emotions —
 trained in PyTorch, quantised to int8, and executed entirely in the browser.**
 
-### → **[shashvat-singham.github.io/tweet-response](https://shashvat-singham.github.io/tweet-response/)** ←
+### → **[tweet-response.vercel.app](https://tweet-response.vercel.app/)** ←
 
-[![Pages](https://github.com/shashvat-singham/tweet-response/actions/workflows/pages.yml/badge.svg)](https://github.com/shashvat-singham/tweet-response/actions/workflows/pages.yml)
+[![CI](https://github.com/shashvat-singham/tweet-response/actions/workflows/ci.yml/badge.svg)](https://github.com/shashvat-singham/tweet-response/actions/workflows/ci.yml)
 ![Test accuracy](https://img.shields.io/badge/test%20accuracy-88.0%25-14c8a6)
 ![Macro F1](https://img.shields.io/badge/macro%20F1-0.839-14c8a6)
 ![Params](https://img.shields.io/badge/parameters-175,926-5b8cff)
@@ -35,7 +35,7 @@ parameters — and takes it the rest of the way:
 | **Shipped** | The forward pass rewritten in ~90 lines of typed-array JavaScript. No TensorFlow.js, no ONNX runtime, no WASM, no API. Runs in a web worker. |
 | **Verified** | `ml/export.py` emits golden probability vectors from a numpy reference; `ml/parity.mjs` replays them through the JavaScript engine in CI and fails the deploy on any drift past 1e-4. |
 
-The [live site](https://shashvat-singham.github.io/tweet-response/) is the real
+The [live site](https://tweet-response.vercel.app/) is the real
 deliverable: type a sentence and watch the posterior, the per-token leave-one-out
 attributions and the belief trajectory update on every keystroke — all computed on
 your own machine.
@@ -101,7 +101,7 @@ Two details are preserved deliberately rather than "fixed":
 ## Repository layout
 
 ```
-docs/                 the published site (GitHub Pages serves this directory)
+docs/                 the published site (Vercel serves this directory verbatim)
   index.html
   assets/
     engine.js         BiLSTM forward pass + Keras-compatible tokenizer, in plain JS
@@ -123,6 +123,7 @@ ml/
   export.py           evaluation, quantisation, artefact emission
   parity.mjs          asserts the JS engine matches the numpy reference
 
+vercel.json           static config: output directory, cache and CSP headers
 Twitter Emotion Recognition using RNN.ipynb   the original notebook, unchanged
 Dataset/merged_training.zip                   the 416k-row merged corpus
 ```
@@ -145,6 +146,21 @@ python -m http.server 8000 --directory docs   # then open localhost:8000
 `train.py` also accepts `--config scaled`, which trains the same topology on the
 416k-row merged corpus in `Dataset/` after removing every text that appears in the
 validation or test split.
+
+---
+
+## Deployment
+
+There is no build step. `vercel.json` points Vercel at `docs/` and serves it as
+static files, so a push to `main` is a deploy:
+
+```bash
+npx vercel deploy --prod        # or just: git push
+```
+
+`.github/workflows/ci.yml` runs the parity test and sanity-checks the exported
+metrics on every push, so a broken export shows up as a failing check next to the
+deploy rather than as a silently wrong site.
 
 ---
 
